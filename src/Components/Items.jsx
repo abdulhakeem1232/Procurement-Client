@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import ItemModal from './ItemModal'; 
+import { endpoints } from '../Services/endpoints';
+import ItemModal from './ItemModal';
 
 function Items() {
   const [items, setItems] = useState([]);
@@ -8,23 +9,23 @@ function Items() {
   const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState({
-    itemNo: '',
     itemName: '',
     inventoryLocation: '',
     brand: '',
     category: '',
-    supplier: '', 
-    stockUnit: 'Piece', 
+    supplier: '',
+    stockUnit: 'Piece',
     unitPrice: '',
     itemImages: [],
-    status: 'Enabled',
   });
 
   useEffect(() => {
     const fetchItems = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/api/items'); 
+        const response = await axios.get(endpoints.getAllItems);
+        console.log(response.data);
+        
         setItems(response.data.items);
       } catch (error) {
         console.error('Error fetching items:', error);
@@ -32,7 +33,6 @@ function Items() {
         setLoading(false);
       }
     };
-
     fetchItems();
   }, []);
 
@@ -44,14 +44,35 @@ function Items() {
     }));
   };
 
+  const handleFileChange = (e) => {
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      itemImages: e.target.files,
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const data = new FormData();
+    for (const key in formData) {
+      if (key === 'itemImages') {
+        for (let file of formData[key]) {
+          data.append('itemImages', file);
+        }
+      } else {
+        data.append(key, formData[key]);
+      }
+    }
+
     try {
-      const response = await axios.post('/api/items', formData); 
+      const response = await axios.post(endpoints.createItems, data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      console.log(response);
+      
       setItems((prevItems) => [...prevItems, response.data.item]);
-      setShowModal(false); 
+      setShowModal(false);
       setFormData({
-        itemNo: '',
         itemName: '',
         inventoryLocation: '',
         brand: '',
@@ -60,7 +81,6 @@ function Items() {
         stockUnit: 'Piece',
         unitPrice: '',
         itemImages: [],
-        status: 'Enabled',
       });
     } catch (error) {
       console.error('Error creating item:', error);
@@ -76,7 +96,7 @@ function Items() {
             onClick={() => setShowModal(true)}
             className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition duration-200"
           >
-            + Create New Item
+            Create New Item
           </button>
         </div>
 
@@ -87,54 +107,34 @@ function Items() {
             <table className="min-w-full bg-white border rounded-lg shadow-sm">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Item No
-                  </th>
-                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Item Name
-                  </th>
-                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Supplier
-                  </th>
-                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Unit Price
-                  </th>
-                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Status
-                  </th>
+                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Item Name</th>
+                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand</th>
+                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Inventory Location</th>
+                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Supplier</th>
+                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock Unit</th>
+                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Unit Price</th>
+                  <th className="px-6 py-3 border-b-2 border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Images</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item) => (
-                  <tr key={item.itemNo} className="border-t">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {item.itemNo}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {item.itemName}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {item.category}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {item.supplier?.name || 'N/A'} 
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      ${item.unitPrice.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          item.status === 'Enabled'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {item.status}
-                      </span>
+                  <tr key={item._id}>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.itemName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.category}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.brand}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.inventoryLocation}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.supplier?.supplierName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.stockUnit}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.unitPrice}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {item.itemImages && item.itemImages.length > 0 ? (
+                        item.itemImages.map((img, index) => (
+                          <img key={index} src={img} alt={`Item ${index}`} className="w-10 h-10 rounded" />
+                        ))
+                      ) : (
+                        <p>No Images</p>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -142,17 +142,18 @@ function Items() {
             </table>
           </div>
         ) : (
-          <p className="text-gray-500 text-sm text-center mt-4">No items available.</p>
+          <p className="text-center text-gray-500">No items found.</p>
         )}
-
-        <ItemModal
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          onSubmit={handleSubmit}
-          formData={formData}
-          onInputChange={handleInputChange}
-        />
       </div>
+
+      <ItemModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleSubmit}
+        formData={formData}
+        onInputChange={handleInputChange}
+        onFileChange={handleFileChange}
+      />
     </div>
   );
 }
